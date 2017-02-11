@@ -2,6 +2,8 @@ __pycache__
 checkpoint
 datasets
 imgs
-logs
+logs*
 python
 sample*
+*.tar.gz
+*.pyc

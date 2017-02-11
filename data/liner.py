@@ -31,7 +31,8 @@ def main(root):
         root, ext = os.path.splitext(file)
         if ext == ".jpg":
             dst = "%s/%d%s" % (dst_dir, i, ext)
-            make_contor_image(file, dst)
+            if not os.path.exists(dst):
+                make_contor_image(file, dst)
 
 if __name__ == '__main__':
     main(sys.argv[1])
