@@ -117,7 +117,7 @@ class pix2pix(object):
         self.d_vars = [var for var in t_vars if 'd_' in var.name]
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
 
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
 
 
     def load_random_samples(self):
