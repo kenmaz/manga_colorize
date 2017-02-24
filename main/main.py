@@ -55,7 +55,11 @@ def main(_):
         config = tf.ConfigProto()
 
     with tf.Session(config=config) as sess:
-        fine_size = np.array([args.fine_size_h, args.fine_size_w])
+        if args.phase == 'train':
+            fine_size = np.array([args.fine_size_h, args.fine_size_w])
+        else:
+            fine_size = np.array([args.fine_size_h*3, args.fine_size_w*3])
+
         load_size = np.array([args.load_size_h, args.load_size_w])
 
         model = pix2pix(sess,
