@@ -23,6 +23,7 @@ class pix2pix(object):
                  input_c_dim=3,
                  output_c_dim=3,
                  dataset_name="manga",
+                 is_train=True,
                  checkpoint_dir=None,
                  sample_dir=None):
         """
@@ -43,6 +44,7 @@ class pix2pix(object):
         self.load_size = load_size
         self.sample_size = sample_size
         self.output_size = output_size
+        self.is_train = is_train
 
         self.gf_dim = gf_dim
         self.df_dim = df_dim
@@ -82,6 +84,29 @@ class pix2pix(object):
                                         [self.batch_size, self.image_size[0], self.image_size[1],
                                          self.input_c_dim + self.output_c_dim],
                                         name='real_A_and_B_images')
+        if self.is_train:
+            self.build_train_model()
+        else:
+            self.build_test_model()
+
+        t_vars = tf.trainable_variables()
+
+        self.d_vars = [var for var in t_vars if 'd_' in var.name]
+        self.g_vars = [var for var in t_vars if 'g_' in var.name]
+
+        if self.is_train:
+            self.d_saver = tf.train.Saver(var_list = self.d_vars, keep_checkpoint_every_n_hours = 1)
+        self.g_saver = tf.train.Saver(var_list = self.g_vars, keep_checkpoint_every_n_hours = 1)
+
+    def build_test_model(self):
+        self.real_A = self.real_data[:, :, :, self.input_c_dim:self.input_c_dim + self.output_c_dim]
+        self.fake_B_sample = self.sampler(self.real_A)
+
+    def build_train_model(self):
+        self.real_data = tf.placeholder(tf.float32,
+                                        [self.batch_size, self.image_size[0], self.image_size[1],
+                                         self.input_c_dim + self.output_c_dim],
+                                        name='real_A_and_B_images')
 
         self.real_B = self.real_data[:, :, :, :self.input_c_dim]
         self.real_A = self.real_data[:, :, :, self.input_c_dim:self.input_c_dim + self.output_c_dim]
@@ -111,14 +136,6 @@ class pix2pix(object):
 
         self.g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
         self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
-
-        t_vars = tf.trainable_variables()
-
-        self.d_vars = [var for var in t_vars if 'd_' in var.name]
-        self.g_vars = [var for var in t_vars if 'g_' in var.name]
-
-        self.saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
-
 
     def load_random_samples(self):
         data = np.random.choice(glob('./datasets/{}/val/*.jpg'.format(self.dataset_name)), self.batch_size)
@@ -162,13 +179,7 @@ class pix2pix(object):
 
         for epoch in xrange(args.epoch):
             data = glob('./datasets/{}/train/*.jpg'.format(self.dataset_name))
-            #np.random.shuffle(data)
-            #train_size: 1e8 = 100000000.0
             batch_idxs = min(len(data), args.train_size) // self.batch_size
-            #print(len(data))
-            #print(args.train_size)
-            #print(self.batch_size)
-            #print(batch_idxs)
 
             for idx in xrange(0, batch_idxs):
                 batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
@@ -177,10 +188,6 @@ class pix2pix(object):
                     batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
                 else:
                     batch_images = np.array(batch).astype(np.float32)
-
-                # [1, 256, 256, 6]
-                #print("batch_images:")
-                #print(batch_images.shape)
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
@@ -219,23 +226,19 @@ class pix2pix(object):
         else:
             assert tf.get_variable_scope().reuse == False
 
-        h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+        h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv')) # w(5,5,6,64),b(64)
         # h0 is (128 x 128 x self.df_dim)
-        h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
+        h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv'))) #w(5,5,64,128),b(128)
         # h1 is (64 x 64 x self.df_dim*2)
         h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
         # h2 is (32x 32 x self.df_dim*4)
-        h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, d_h=1, d_w=1, name='d_h3_conv')))
+        h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, d_h=1, d_w=1, name='d_h3_conv'))) #w(5,5,256,512) b(512)
         # h3 is (16 x 16 x self.df_dim*8)
-        h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
-
-        hs = "\n".join([str(i) for i in [h0,h1,h2,h3,h4]])
-        print("dis:%s" % hs)
+        h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin') #matrix(786432,1), h4=(1,48,32,512)
 
         return tf.nn.sigmoid(h4), h4
 
     def generator(self, image, y=None):
-        #print(image.get_shape) #(1, 384, 256, 3)
 
         s = self.output_size #[384,256]
         s2, s4, s8, s16, s32, s64, s128 = s/2, s/4, s/8, s/16, s/32, s/64, s/128
@@ -307,7 +310,8 @@ class pix2pix(object):
         return tf.nn.tanh(self.d8)
 
     def sampler(self, image, y=None):
-        tf.get_variable_scope().reuse_variables()
+        if self.is_train:
+            tf.get_variable_scope().reuse_variables()
 
         s = self.output_size
         s2, s4, s8, s16, s32, s64, s128 = s/2, s/4, s/8, s/16, s/32, s/64, s/128
@@ -379,27 +383,41 @@ class pix2pix(object):
         return tf.nn.tanh(self.d8)
 
     def save(self, checkpoint_dir, step):
-        model_name = "pix2pix.model"
-        model_dir = "%s_%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size[0], self.output_size[1])
-        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+        if self.is_train:
+            self.save_as(self.d_saver, os.path.join(checkpoint_dir,'d'), step)
+        self.save_as(self.g_saver, os.path.join(checkpoint_dir,'g'), step)
+
+    def save_as(self, saver, checkpoint_dir, step):
+        print(" [*] Saving checkpoint... %s" % checkpoint_dir)
+
+        model_name = "manga.model"
 
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
-        self.saver.save(self.sess,
+        saver.save(self.sess,
                         os.path.join(checkpoint_dir, model_name),
                         global_step=step)
 
     def load(self, checkpoint_dir):
-        print(" [*] Reading checkpoint...")
+        res_d = False
+        res_g = False
 
-        model_dir = "%s_%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size[0], self.output_size[1])
-        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+        if self.is_train:
+            res_d = self.load_as(self.d_saver, os.path.join(checkpoint_dir,'d'))
+        else:
+            res_d = True
+        res_g = self.load_as(self.g_saver, os.path.join(checkpoint_dir,'g'))
+        return res_d and res_g
+
+    def load_as(self, saver, checkpoint_dir):
+        print(" [*] Reading checkpoint... %s" % checkpoint_dir)
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-            self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
+            saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
             return True
         else:
             return False
@@ -426,7 +444,6 @@ class pix2pix(object):
         sample_images = [sample_images[i:i+self.batch_size]
                          for i in xrange(0, len(sample_images), self.batch_size)]
         sample_images = np.array(sample_images)
-        print(sample_images.shape)
 
         start_time = time.time()
         if self.load(self.checkpoint_dir):

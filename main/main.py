@@ -55,7 +55,13 @@ def main(_):
         config = tf.ConfigProto()
 
     with tf.Session(config=config) as sess:
-        fine_size = np.array([args.fine_size_h, args.fine_size_w])
+        is_train = (args.phase == 'train')
+
+        if is_train:
+            fine_size = np.array([args.fine_size_h, args.fine_size_w])
+        else:
+            fine_size = np.array([args.fine_size_h*3, args.fine_size_w*3])
+
         load_size = np.array([args.load_size_h, args.load_size_w])
 
         model = pix2pix(sess,
@@ -65,9 +71,12 @@ def main(_):
                     batch_size=args.batch_size,
                     dataset_name=args.dataset_name,
                     checkpoint_dir=args.checkpoint_dir,
-                    sample_dir=args.sample_dir)
+                    sample_dir=args.sample_dir,
+                    is_train=is_train)
+        print(model)
+        print(model.train)
 
-        if args.phase == 'train':
+        if is_train:
             model.train(args)
         elif args.phase == 'act':
             model.act(args)
