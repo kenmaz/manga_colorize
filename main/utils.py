@@ -17,6 +17,14 @@ get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 # -----------------------------
 # new added functions for pix2pix
 
+def load_act(image_path, load_size, fine_size):
+    img = scipy.misc.imread(image_path, mode='RGB')
+    img = scipy.misc.imresize(img, fine_size)
+    img = img/127.5 - 1.
+    print(img.shape)
+    img = np.concatenate((img, img), axis=2)
+    return img
+
 def load_data(image_path, load_size, fine_size, flip=True, is_test=False):
     img_A, img_B = load_image(image_path)
     img_A, img_B = preprocess_A_and_B(img_A, img_B, load_size, fine_size, flip=flip, is_test=is_test)

@@ -69,6 +69,8 @@ def main(_):
 
         if args.phase == 'train':
             model.train(args)
+        elif args.phase == 'act':
+            model.act(args)
         else:
             model.test(args)
 

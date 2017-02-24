@@ -229,6 +229,9 @@ class pix2pix(object):
         # h3 is (16 x 16 x self.df_dim*8)
         h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
 
+        hs = "\n".join([str(i) for i in [h0,h1,h2,h3,h4]])
+        print("dis:%s" % hs)
+
         return tf.nn.sigmoid(h4), h4
 
     def generator(self, image, y=None):
@@ -440,3 +443,36 @@ class pix2pix(object):
             )
             save_images(samples, [self.batch_size, 1],
                         './{}/test_{:04d}.png'.format(args.test_dir, idx))
+
+    def act(self, args):
+        print("act");
+        tf.initialize_all_variables().run()
+        sample_files = glob('./datasets/{}/act/*.jpg'.format(self.dataset_name))
+        print("Loading testing images ...")
+        sample = [load_act(sample_file, self.load_size, self.image_size) for sample_file in sample_files]
+
+        if (self.is_grayscale):
+            sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
+        else:
+            sample_images = np.array(sample).astype(np.float32)
+
+        sample_images = [sample_images[i:i+self.batch_size]
+                         for i in xrange(0, len(sample_images), self.batch_size)]
+        sample_images = np.array(sample_images)
+        print(sample_images.shape)
+
+        start_time = time.time()
+        if self.load(self.checkpoint_dir):
+            print(" [*] Load SUCCESS")
+        else:
+            print(" [!] Load failed...")
+
+        for i, sample_image in enumerate(sample_images):
+            idx = i+1
+            print("sampling image ", idx)
+            samples = self.sess.run(
+                self.fake_B_sample,
+                feed_dict={self.real_data: sample_image}
+            )
+            save_images(samples, [self.batch_size, 1],
+                        './act/act_{:04d}.png'.format(idx))
