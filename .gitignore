@@ -7,4 +7,4 @@ python
 sample*
 *.tar.gz
 *.pyc
-test
+test*

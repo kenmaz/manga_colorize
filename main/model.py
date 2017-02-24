@@ -24,6 +24,7 @@ class pix2pix(object):
                  output_c_dim=3,
                  dataset_name="manga",
                  checkpoint_dir=None,
+                 checkpoint_name=None,
                  sample_dir=None):
         """
 
@@ -75,6 +76,7 @@ class pix2pix(object):
 
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_name = checkpoint_name
         self.build_model()
 
     def build_model(self):
@@ -90,7 +92,9 @@ class pix2pix(object):
 
         self.real_AB = tf.concat(axis=3, values=[self.real_A, self.real_B])
         self.fake_AB = tf.concat(axis=3, values=[self.real_A, self.fake_B])
+        print("self.D")
         self.D, self.D_logits = self.discriminator(self.real_AB, reuse=False)
+        print("self.D_")
         self.D_, self.D_logits_ = self.discriminator(self.fake_AB, reuse=True)
 
         self.fake_B_sample = self.sampler(self.real_A)
@@ -117,7 +121,8 @@ class pix2pix(object):
         self.d_vars = [var for var in t_vars if 'd_' in var.name]
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
 
-        self.saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
+        self.d_saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
+        self.g_saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
 
 
     def load_random_samples(self):
@@ -155,7 +160,7 @@ class pix2pix(object):
         counter = 1
         start_time = time.time()
 
-        if self.load(self.checkpoint_dir):
+        if self.load():
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")
@@ -209,26 +214,33 @@ class pix2pix(object):
                 if np.mod(counter, 100) == 1:
                     self.sample_model(args.sample_dir, epoch, idx)
 
-                if np.mod(counter, 500) == 2:
-                    self.save(args.checkpoint_dir, counter)
+                if np.mod(counter, 5) == 2:
+                    self.save(counter)
 
     def discriminator(self, image, y=None, reuse=False):
         # image is 256 x 256 x (input_c_dim + output_c_dim)
         with tf.variable_scope("discriminator") as scope:
             if reuse:
-                scope.reuse_variables()
+                print("reuse")
+                tf.get_variable_scope().reuse_variables()
             else:
+                print("NOT reuse")
                 assert tf.get_variable_scope().reuse == False
 
             h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+            print("h0:%s" % h0.get_shape)
             # h0 is (128 x 128 x self.df_dim)
             h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
+            print("h1:%s" % h1.get_shape)
             # h1 is (64 x 64 x self.df_dim*2)
             h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
+            print("h2:%s" % h2.get_shape)
             # h2 is (32x 32 x self.df_dim*4)
             h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, d_h=1, d_w=1, name='d_h3_conv')))
+            print("h3:%s" % h3.get_shape)
             # h3 is (16 x 16 x self.df_dim*8)
             h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
+            print("h4:%s" % h4.get_shape)
 
             return tf.nn.sigmoid(h4), h4
 
@@ -377,28 +389,25 @@ class pix2pix(object):
 
             return tf.nn.tanh(self.d8)
 
-    def save(self, checkpoint_dir, step):
-        model_name = "pix2pix.model"
-        model_dir = "%s_%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size[0], self.output_size[1])
-        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+    def save(self, step):
+        self.save_as(self.d_saver, os.path.join(self.checkpoint_dir, 'd'), step)
+        self.save_as(self.g_saver, os.path.join(self.checkpoint_dir, 'g'), step)
 
-        if not os.path.exists(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
+    def save_as(self, saver, dist_dir, step):
+        if not os.path.exists(dist_dir):
+            os.makedirs(dist_dir)
 
-        self.saver.save(self.sess,
-                        os.path.join(checkpoint_dir, model_name),
-                        global_step=step)
+        saver.save(self.sess,
+                   os.path.join(dist_dir, self.checkpoint_name),
+                   global_step=step)
 
-    def load(self, checkpoint_dir):
+    def load(self):
         print(" [*] Reading checkpoint...")
 
-        model_dir = "%s_%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size[0], self.output_size[1])
-        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
-
-        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+        ckpt = tf.train.get_checkpoint_state(self.checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-            self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
+            self.saver.restore(self.sess, os.path.join(self.checkpoint_dir, ckpt_name))
             return True
         else:
             return False
@@ -428,7 +437,7 @@ class pix2pix(object):
         print(sample_images.shape)
 
         start_time = time.time()
-        if self.load(self.checkpoint_dir):
+        if self.load():
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")

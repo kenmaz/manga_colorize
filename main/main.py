@@ -32,6 +32,7 @@ parser.add_argument('--continue_train', dest='continue_train', type=bool, defaul
 parser.add_argument('--serial_batches', dest='serial_batches', type=bool, default=False, help='f 1, takes images in order to make batches, otherwise takes them randomly')
 parser.add_argument('--serial_batch_iter', dest='serial_batch_iter', type=bool, default=True, help='iter into serial image list')
 parser.add_argument('--checkpoint_dir', dest='checkpoint_dir', default='./checkpoint', help='models are saved here')
+parser.add_argument('--checkpoint_name', dest='checkpoint_name', default='manga', help='models are saved this name')
 parser.add_argument('--sample_dir', dest='sample_dir', default='./sample', help='sample are saved here')
 parser.add_argument('--test_dir', dest='test_dir', default='./test', help='test sample are saved here')
 parser.add_argument('--L1_lambda', dest='L1_lambda', type=float, default=100.0, help='weight on L1 term in objective')
@@ -57,8 +58,10 @@ def main(_):
     with tf.Session(config=config) as sess:
         if args.phase == 'train':
             fine_size = np.array([args.fine_size_h, args.fine_size_w])
+            train = True
         else:
-            fine_size = np.array([args.fine_size_h*3, args.fine_size_w*3])
+            fine_size = np.array([args.fine_size_h, args.fine_size_w])
+            train = False
 
         load_size = np.array([args.load_size_h, args.load_size_w])
 
@@ -69,9 +72,10 @@ def main(_):
                     batch_size=args.batch_size,
                     dataset_name=args.dataset_name,
                     checkpoint_dir=args.checkpoint_dir,
+                    checkpoint_name=args.checkpoint_name,
                     sample_dir=args.sample_dir)
 
-        if args.phase == 'train':
+        if train:
             model.train(args)
         else:
             model.test(args)
