@@ -423,6 +423,39 @@ class pix2pix(object):
             return False
 
     def test(self, args):
+        tf.initialize_all_variables().run()
+
+        if self.load(self.checkpoint_dir):
+            print(" [*] Load SUCCESS")
+        else:
+            print(" [!] Load failed...")
+
+        sample_files = glob('./datasets/{}/val/*.jpg'.format(self.dataset_name))
+        n = [int(i) for i in map(lambda x: x.split('/')[-1].split('.jpg')[0], sample_files)]
+        sample_files = [x for (y, x) in sorted(zip(n, sample_files))]
+
+        for i, sample_file in enumerate(sample_files):
+            idx = i+1
+            print("sampling image ", idx)
+
+            sample = [load_data(sample_file, self.load_size, self.image_size, is_test=True)]
+
+            if (self.is_grayscale):
+                sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
+            else:
+                sample_images = np.array(sample).astype(np.float32)
+
+            sample_images = np.array(sample_images)
+
+            samples = self.sess.run(
+                self.fake_B_sample,
+                feed_dict={self.real_data: sample_images}
+            )
+            save_images(samples, [self.batch_size, 1],
+                        './{}/test_{:04d}.png'.format(args.test_dir, idx))
+
+
+    def test_(self, args):
         """Test pix2pix"""
         tf.initialize_all_variables().run()
 
