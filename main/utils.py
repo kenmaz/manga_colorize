@@ -26,6 +26,7 @@ def load_act(image_path, load_size, fine_size):
     return img
 
 def load_data(image_path, load_size, fine_size, flip=True, is_test=False):
+    print("load:%s" % image_path)
     img_A, img_B = load_image(image_path)
     img_A, img_B = preprocess_A_and_B(img_A, img_B, load_size, fine_size, flip=flip, is_test=is_test)
 
