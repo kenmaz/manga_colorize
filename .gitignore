@@ -2,7 +2,7 @@ __pycache__
 checkpoint
 datasets
 imgs
-logs*
+log*
 python*
 sample*
 *.tar.gz
