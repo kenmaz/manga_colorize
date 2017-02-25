@@ -60,7 +60,7 @@ def main(_):
         if is_train:
             fine_size = np.array([args.fine_size_h, args.fine_size_w])
         else:
-            fine_size = np.array([args.fine_size_h*3, args.fine_size_w*3])
+            fine_size = np.array([args.fine_size_h*4, args.fine_size_w*4])
 
         load_size = np.array([args.load_size_h, args.load_size_w])
 
