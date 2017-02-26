@@ -58,6 +58,7 @@ class pix2pix(object):
         self.d_bn3 = batch_norm(name='d_bn3')
         self.d_bn4 = batch_norm(name='d_bn4')
         self.d_bn5 = batch_norm(name='d_bn5')
+        self.d_bn6 = batch_norm(name='d_bn6')
 
         self.g_bn_e2 = batch_norm(name='g_bn_e2')
         self.g_bn_e3 = batch_norm(name='g_bn_e3')
@@ -232,10 +233,11 @@ class pix2pix(object):
         h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
         h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
         h4 = lrelu(self.d_bn4(conv2d(h3, self.df_dim*16, name='d_h4_conv')))
-        h5 = lrelu(self.d_bn5(conv2d(h4, self.df_dim*32, d_h=1, d_w=1, name='d_h5_conv')))
-        h6 = linear(tf.reshape(h5, [self.batch_size, -1]), 1, 'd_h6_lin')
+        h5 = lrelu(self.d_bn5(conv2d(h4, self.df_dim*32, name='d_h5_conv')))
+        h6 = lrelu(self.d_bn6(conv2d(h5, self.df_dim*64, d_h=1, d_w=1, name='d_h6_conv')))
+        h7 = linear(tf.reshape(h6, [self.batch_size, -1]), 1, 'd_h7_lin')
 
-        for h in [h0,h1,h2,h3,h4,h5,h6]:
+        for h in [h0,h1,h2,h3,h4,h5,h6,h7]:
             print("h:%s" % h)
 
         return tf.nn.sigmoid(h6), h6
