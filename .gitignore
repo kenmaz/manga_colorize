@@ -13,3 +13,6 @@ main/act/*.png
 chainer/result/cg.dot
 chainer/result/model_final
 chainer/result/optimizer_final
+chainer/result_x2/cg.dot
+chainer/result_x2/model_final
+chainer/result_x2/optimizer_final
