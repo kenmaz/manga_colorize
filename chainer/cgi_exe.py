@@ -140,7 +140,7 @@ class Painter:
 
 if __name__ == '__main__':
     for n in range(1):
-        p = Painter()
+        p = Painter(gpu = 0)
         print(n)
         #p.colorize(n * p.batchsize)
         p.colorize("01")

@@ -31,7 +31,7 @@ def main():
         description='chainer line drawing colorization')
     parser.add_argument('--batchsize', '-b', type=int, default=2,
                         help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=3,
+    parser.add_argument('--epoch', '-e', type=int, default=100,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', type=int, default=-1,
                         help='GPU ID (negative value indicates CPU)')
@@ -163,8 +163,9 @@ class ganUpdater(chainer.training.StandardUpdater):
             for ch in range(3):
                 # randomly use src color ch
                 if np.random.rand() < 0.8:
-                    x_in_2[j, 1 + ch, :] = xp.asarray(cv2.resize(
-                        x_out[j, ch, :], (w_in_2, w_in_2), interpolation=cv2.INTER_CUBIC))
+		    xout_j_ch = chainer.cuda.to_cpu(x_out[j, ch, :])
+		    rsz = cv2.resize(xout_j_ch, (w_in_2, w_in_2), interpolation=cv2.INTER_CUBIC)
+                    x_in_2[j, 1 + ch, :] = xp.asarray(rsz)
 
         x_in_2 = Variable(x_in_2)
         x_out_2 = self.cnn.calc(x_in_2, test=False)

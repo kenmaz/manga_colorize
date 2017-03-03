@@ -14,7 +14,6 @@ from chainer import cuda, optimizers, serializers, Variable
 import cv2
 
 def cvt2YUV(img):
-    print(cv2.__version__)
     vers = cv2.__version__.split(".")
     if vers[0] == '3':
         img = cv2.cvtColor( img, cv2.COLOR_RGB2YUV )
@@ -78,7 +77,6 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
                 blured = cv2.blur(_image1, ksize=(blur, blur))
                 image1 = _image1 + blured - 255
 
-            print("image1:%s,%d,%d" % (image1,s1,s0))
             image1 = cv2.resize(image1, (s1, s0), interpolation=cv2.INTER_AREA)
 
         # image is grayscale
@@ -159,7 +157,6 @@ class Image2ImageDataset(chainer.dataset.DatasetMixin):
 
         path1 = os.path.join(self._root1, self._paths[i])
         path2 = os.path.join(self._root2, self._paths[i])
-        print("path 1:%s 2:%s" % (path1, path2))
         image1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
         image2 = cv2.imread(path2, cv2.IMREAD_COLOR)
 
@@ -291,7 +288,6 @@ class Image2ImageDatasetX2(Image2ImageDataset):
             _image1[_image1 < 0] = 0
             _image1[_image1 > 255] = 255
 
-        print("image1:%s" % (image1.shape,))
         # image is grayscale
         if image1.ndim == 2:
             image1 = image1[:, :, np.newaxis]
@@ -302,14 +298,9 @@ class Image2ImageDatasetX2(Image2ImageDataset):
         if _image2.ndim == 2:
             _image2 = _image2[:, :, np.newaxis]
 
-        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 1, -512, axis=2)
-        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 2, 128, axis=2)
-        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 3, 128, axis=2)
-        print("image1:%s" % (image1.shape,))
-        print("test::%s" % image1[0][0])
         #test::[ 257.96783447 -512.          128.          128.        ]
 
         # color hint !!!
