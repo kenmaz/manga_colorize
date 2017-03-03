@@ -10,3 +10,6 @@ test*
 *.pyc
 *.bk
 main/act/*.png
+chainer/result/cg.dot
+chainer/result/model_final
+chainer/result/optimizer_final
