@@ -291,6 +291,7 @@ class Image2ImageDatasetX2(Image2ImageDataset):
             _image1[_image1 < 0] = 0
             _image1[_image1 > 255] = 255
 
+        print("image1:%s" % (image1.shape,))
         # image is grayscale
         if image1.ndim == 2:
             image1 = image1[:, :, np.newaxis]
@@ -301,10 +302,17 @@ class Image2ImageDatasetX2(Image2ImageDataset):
         if _image2.ndim == 2:
             _image2 = _image2[:, :, np.newaxis]
 
+        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 1, -512, axis=2)
+        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 2, 128, axis=2)
+        print("image1:%s" % (image1.shape,))
         image1 = np.insert(image1, 3, 128, axis=2)
+        print("image1:%s" % (image1.shape,))
+        print("test::%s" % image1[0][0])
+        #test::[ 257.96783447 -512.          128.          128.        ]
 
+        # color hint !!!
         # randomly add terget image px
         if self._leak[1] > 0:
             image0 = image1

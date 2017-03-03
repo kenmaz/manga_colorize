@@ -55,13 +55,12 @@ def main():
     print('')
 
     root = args.dataset
-    #model = "./model_paint"
 
     cnn = unet.UNET()
     #serializers.load_npz("result/model_iter_10000", cnn)
     cnn_128 = unet.UNET()
     #serializers.load_npz("models/model_cnn_128_dfl2_9", cnn_128)
-    print(root)
+
     dataset = Image2ImageDatasetX2(
         "dat/images_color_train.dat", root + "linex2/", root + "colorx2/", train=True)
     # dataset.set_img_dict(img_dict)
@@ -126,7 +125,6 @@ class ganUpdater(chainer.training.StandardUpdater):
         return loss
 
     def update_core(self):
-        print(1)
         xp = self.cnn.xp
         self._iter += 1
 
@@ -142,14 +140,16 @@ class ganUpdater(chainer.training.StandardUpdater):
         t_out = xp.zeros((batchsize, 3, w_out, w_out)).astype("f")
 
         for i in range(batchsize):
-            print(2)
+            # mono_small:(4, 128, 128)
             x_in[i, :] = xp.asarray(batch[i][0])
+            # mono_large:(1, 512, 512)
             x_in_2[i, 0, :] = xp.asarray(batch[i][2])
             for ch in range(3):
-                print(3)
-                color_ch = cv2.resize(
-                    batch[i][1][ch], (w_out, w_out), interpolation=cv2.INTER_CUBIC).astype("f")
+                # color_smal:(3, 128, 128)
+                chd = batch[i][1][ch]
+                color_ch = cv2.resize(chd, (w_out, w_out), interpolation=cv2.INTER_CUBIC).astype("f")
                 x_in_2[i, ch + 1, :] = xp.asarray(color_ch)
+            # color_large:(3, 512, 512)
             t_out[i, :] = xp.asarray(batch[i][3])
 
         x_in = Variable(x_in)
@@ -160,9 +160,7 @@ class ganUpdater(chainer.training.StandardUpdater):
         x_out = x_out.data
 
         for j in range(batchsize):
-            print(4)
             for ch in range(3):
-                print(5)
                 # randomly use src color ch
                 if np.random.rand() < 0.8:
                     x_in_2[j, 1 + ch, :] = xp.asarray(cv2.resize(
