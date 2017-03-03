@@ -3,7 +3,7 @@ checkpoint
 datasets
 imgs
 logs*
-python
+python*
 sample*
 *.tar.gz
 *.pyc
