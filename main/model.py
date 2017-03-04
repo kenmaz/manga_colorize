@@ -178,6 +178,7 @@ class pix2pix(object):
                     batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
                 else:
                     batch_images = np.array(batch).astype(np.float32)
+                del batch
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
@@ -197,6 +198,8 @@ class pix2pix(object):
                 errD_fake = self.d_loss_fake.eval({self.real_data: batch_images})
                 errD_real = self.d_loss_real.eval({self.real_data: batch_images})
                 errG = self.g_loss.eval({self.real_data: batch_images})
+
+                del batch_images
 
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
