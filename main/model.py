@@ -156,8 +156,7 @@ class pix2pix(object):
                           .minimize(self.g_loss, var_list=self.g_vars)
         self.sess.run(tf.global_variables_initializer())
 
-        self.g_sum = tf.summary.merge([self.d__sum,
-            self.fake_B_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        self.g_sum = tf.summary.merge([self.d__sum, self.fake_B_sum, self.d_loss_fake_sum, self.g_loss_sum])
         self.d_sum = tf.summary.merge([self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
         counter = 1
@@ -170,13 +169,7 @@ class pix2pix(object):
 
         for epoch in xrange(args.epoch):
             data = glob('./datasets/{}/train/*.jpg'.format(self.dataset_name))
-            #np.random.shuffle(data)
-            #train_size: 1e8 = 100000000.0
             batch_idxs = min(len(data), args.train_size) // self.batch_size
-            #print(len(data))
-            #print(args.train_size)
-            #print(self.batch_size)
-            #print(batch_idxs)
 
             for idx in xrange(0, batch_idxs):
                 batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
@@ -185,10 +178,6 @@ class pix2pix(object):
                     batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
                 else:
                     batch_images = np.array(batch).astype(np.float32)
-
-                # [1, 256, 256, 6]
-                #print("batch_images:")
-                #print(batch_images.shape)
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum],
