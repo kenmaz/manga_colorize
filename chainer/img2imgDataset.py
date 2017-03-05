@@ -9,6 +9,7 @@ import chainer.datasets.image_dataset as ImageDataset
 '''
 import six
 import os
+from glob import glob
 
 from chainer import cuda, optimizers, serializers, Variable
 import cv2
@@ -118,6 +119,14 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
 
         return image1.transpose(2, 0, 1), _image1.transpose(2, 0, 1)
 
+def load_image_pair(image_path):
+    print("load_image_pair:%s" % image_path)
+    input_img = cv2.imread(image_path)
+    w = int(input_img.shape[1])
+    w2 = int(w/2)
+    img_A = input_img[:, 0:w2]
+    img_B = input_img[:, w2:w]
+    return img_A, img_B
 
 class Image2ImageDataset(chainer.dataset.DatasetMixin):
 
@@ -133,6 +142,8 @@ class Image2ImageDataset(chainer.dataset.DatasetMixin):
         self._leak = leak
         self._img_dict = {}
         self._train = train
+
+        self._trainpaths = glob('./../main/datasets/manga/train/*.jpg')
 
     def set_img_dict(self, img_dict):
         self._img_dict = img_dict
@@ -155,10 +166,13 @@ class Image2ImageDataset(chainer.dataset.DatasetMixin):
         if self._train:
             bin_r = 0.9
 
-        path1 = os.path.join(self._root1, self._paths[i])
-        path2 = os.path.join(self._root2, self._paths[i])
-        image1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
-        image2 = cv2.imread(path2, cv2.IMREAD_COLOR)
+        image1, image2 = load_image_pair(self._trainpaths[i])
+        image1 = cv2.resize(image1, (128, 128), interpolation=cv2.INTER_AREA)
+        image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+        image2 = cv2.resize(image2, (128, 128), interpolation=cv2.INTER_AREA)
+
+        print("image1:%s" % (image1.shape,))
+        print("image2:%s" % (image2.shape,))
 
         image2 = cvt2YUV( image2 )
         name1 = os.path.basename(self._paths[i])
@@ -243,15 +257,20 @@ class Image2ImageDataset(chainer.dataset.DatasetMixin):
 class Image2ImageDatasetX2(Image2ImageDataset):
 
     def get_example(self, i, minimize=False, log=False, bin_r=0):
-        path1 = os.path.join(self._root1, self._paths[i])
-        path2 = os.path.join(self._root2, self._paths[i])
+        image1, image2 = load_image_pair(self._trainpaths[i])
+        image1 = cv2.resize(image1, (512, 512), interpolation=cv2.INTER_AREA)
+        image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+        image2 = cv2.resize(image2, (512, 512), interpolation=cv2.INTER_AREA)
+
+        #path1 = os.path.join(self._root1, self._paths[i])
+        #path2 = os.path.join(self._root2, self._paths[i])
         #image1 = ImageDataset._read_image_as_array(path1, self._dtype)
-        image1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
-        image2 = cv2.imread(path2, cv2.IMREAD_COLOR)
+        #image1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
+        #image2 = cv2.imread(path2, cv2.IMREAD_COLOR)
         image2 = cvt2YUV(image2)
         image2 = np.asarray(image2, self._dtype)
-        name1 = os.path.basename(self._paths[i])
-        vec = self.get_vec(name1)
+        #name1 = os.path.basename(self._paths[i])
+        #vec = self.get_vec(name1)
 
         # add flip and noise
         if self._train:
