@@ -29,18 +29,20 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         self._root1 = root1
         self._root2 = root2
         self._dtype = dtype
+        self._testpaths = glob('./../main/datasets/manga/test/*.jpg')
 
     def __len__(self):
-        return len(self._paths)
+        return len(self._testpaths)
 
     def get_name(self, i):
         return self._paths[i]
 
     def get_example(self, i, minimize=False, blur=0, s_size=128):
-        path1 = os.path.join(self._root1, self._paths[i])
-        #image1 = ImageDataset._read_image_as_array(path1, self._dtype)
+        path1 = self._testpaths[i]
+        image1, _ = load_image_pair(path1)
+        image1 = cv2.resize(image1, (512, 512), interpolation=cv2.INTER_AREA)
+        image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 
-        image1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
         print("load:" + path1, os.path.isfile(path1), image1 is None)
         image1 = np.asarray(image1, self._dtype)
         print(image1.shape)
@@ -89,33 +91,6 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         image1 = np.insert(image1, 1, -512, axis=2)
         image1 = np.insert(image1, 2, 128, axis=2)
         image1 = np.insert(image1, 3, 128, axis=2)
-
-        # add color ref image
-        path_ref = os.path.join(self._root2, self._paths[i])
-        print("path_ref %s:" % path_ref)
-
-        if minimize:
-            image_ref = cv2.imread(path_ref, cv2.IMREAD_UNCHANGED)
-            image_ref = cv2.resize(image_ref, (image1.shape[1], image1.shape[
-                                   0]), interpolation=cv2.INTER_NEAREST)
-            b, g, r, a = cv2.split(image_ref)
-            image_ref = cvt2YUV( cv2.merge((b, g, r)) )
-
-            for x in range(image1.shape[0]):
-                for y in range(image1.shape[1]):
-                    if a[x][y] != 0:
-                        for ch in range(3):
-                            image1[x][y][ch + 1] = image_ref[x][y][ch]
-
-        else:
-            image_ref = cv2.imread(path_ref, cv2.IMREAD_COLOR)
-            image_ref = cvt2YUV(image_ref)
-            image1 = cv2.resize(
-                image1, (4 * image_ref.shape[1], 4 * image_ref.shape[0]), interpolation=cv2.INTER_AREA)
-            image_ref = cv2.resize(image_ref, (image1.shape[1], image1.shape[
-                                   0]), interpolation=cv2.INTER_AREA)
-
-            image1[:, :, 1:] = image_ref
 
         return image1.transpose(2, 0, 1), _image1.transpose(2, 0, 1)
 
