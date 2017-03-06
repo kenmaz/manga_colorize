@@ -28,7 +28,7 @@ os.environ["CHAINER_TYPE_CHECK"] = "0"
 def main():
     parser = argparse.ArgumentParser(
         description='chainer line drawing colorization')
-    parser.add_argument('--batchsize', '-b', type=int, default=2,
+    parser.add_argument('--batchsize', '-b', type=int, default=32,
                         help='Number of images in each mini-batch')
     parser.add_argument('--epoch', '-e', type=int, default=1000,
                         help='Number of sweeps over the dataset to train')
