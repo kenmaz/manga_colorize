@@ -28,7 +28,7 @@ class Painter:
         self.root = "./images/"
         self.batchsize = 1
         self.outdir = self.root + "out/"
-        self.outdir_min = self.root + "out_min/"
+        self.outdir_min = self.root + "out/"
         self.gpu = gpu
         self._dtype = np.float32
 
@@ -43,20 +43,25 @@ class Painter:
             self.cnn_128.to_gpu()
             self.cnn_512.to_gpu()
 
-        serializers.load_npz("./result/model_final", self.cnn_128)
-        serializers.load_npz("./result_x2/model_final", self.cnn_512)
+        serializers.load_npz("./result/cnn_128_iter_10000", self.cnn_128)
+        serializers.load_npz("./result_x2/cnn_x2_iter_7000", self.cnn_512)
 
     def save_as_img(self, array, name):
         print("save %s" % name)
+	print(array.shape)
 
         array = array.transpose(1, 2, 0)
+	print(array.shape)
         array = array.clip(0, 255).astype(np.uint8)
+	print(array.shape)
         array = cuda.to_cpu(array)
+	print(array.shape)
         vers = cv2.__version__.split(".")
         if vers[0] == '3':
             img = cv2.cvtColor(array, cv2.COLOR_YUV2RGB)
         else:
             img = cv2.cvtColor(array, cv2.COLOR_YUV2BGR)
+	print(img)
         cv2.imwrite(name, img)
 
     def liner(self, id_str):
@@ -77,7 +82,7 @@ class Painter:
 
         self.save_as_img(y.data[0], self.root + "dst/" + id_str + ".jpg")
 
-    def colorize(self, id_str, step='C', blur=0, s_size=128,colorize_format="jpg"):
+    def colorize(self, id_str, step='L', blur=0, s_size=128,colorize_format="jpg"):
         if self.gpu >= 0:
             cuda.get_device(self.gpu).use()
 
@@ -87,6 +92,7 @@ class Painter:
 
         _ = {'S': True, 'L': False, 'C': True}
         sample = dataset.get_example(0, minimize=_[step], blur=blur, s_size=s_size)
+	id_str = "%d" % sample[2]
 
         _ = {'S': 0, 'L': 1, 'C': 0}[step]
         sample_container = np.zeros(
@@ -98,7 +104,7 @@ class Painter:
 
         cnn = {'S': self.cnn_128, 'L': self.cnn_512, 'C': self.cnn_128}
         image_conv2d_layer = cnn[step].calc(Variable(sample_container, volatile='on'), test=True)
-        del sample_container
+        #del sample_container
 
         if step == 'C':
             input_bat = np.zeros((1, 4, sample[1].shape[1], sample[1].shape[2]), dtype='f')
@@ -122,9 +128,9 @@ class Painter:
             del link  # release memory
 
         image_out_path = {
-            'S': self.outdir_min + id_str + ".png", 
-            'L': self.outdir + id_str + ".jpg", 
-            'C': self.outdir + id_str + "_0." + colorize_format}
+            'S': self.outdir + 's_' + id_str + ".png", 
+            'L': self.outdir + 'l_' + id_str + ".jpg", 
+            'C': self.outdir + 'c_' + id_str + "." + colorize_format}
         self.save_as_img(image_conv2d_layer.data[0], image_out_path[step])
         del image_conv2d_layer
 

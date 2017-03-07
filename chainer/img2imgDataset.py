@@ -10,6 +10,7 @@ import chainer.datasets.image_dataset as ImageDataset
 import six
 import os
 from glob import glob
+import random
 
 from chainer import cuda, optimizers, serializers, Variable
 import cv2
@@ -29,7 +30,7 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         self._root1 = root1
         self._root2 = root2
         self._dtype = dtype
-        self._testpaths = glob('./../main/datasets/manga/test/*.jpg')
+        self._testpaths = glob('./../main/datasets/manga/val/*.jpg')
 
     def __len__(self):
         return len(self._testpaths)
@@ -38,7 +39,9 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         return self._paths[i]
 
     def get_example(self, i, minimize=False, blur=0, s_size=128):
+	i = random.randint(0, len(self._testpaths) - 1)
         path1 = self._testpaths[i]
+	print(path1)
         image1, _ = load_image_pair(path1)
         image1 = cv2.resize(image1, (512, 512), interpolation=cv2.INTER_AREA)
         image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
@@ -92,7 +95,7 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         image1 = np.insert(image1, 2, 128, axis=2)
         image1 = np.insert(image1, 3, 128, axis=2)
 
-        return image1.transpose(2, 0, 1), _image1.transpose(2, 0, 1)
+        return image1.transpose(2, 0, 1), _image1.transpose(2, 0, 1), i
 
 def load_image_pair(image_path):
     #print("load_image_pair:%s" % image_path)
