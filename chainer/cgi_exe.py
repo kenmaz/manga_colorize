@@ -48,20 +48,15 @@ class Painter:
 
     def save_as_img(self, array, name):
         print("save %s" % name)
-	print(array.shape)
 
         array = array.transpose(1, 2, 0)
-	print(array.shape)
         array = array.clip(0, 255).astype(np.uint8)
-	print(array.shape)
         array = cuda.to_cpu(array)
-	print(array.shape)
         vers = cv2.__version__.split(".")
         if vers[0] == '3':
             img = cv2.cvtColor(array, cv2.COLOR_YUV2RGB)
         else:
             img = cv2.cvtColor(array, cv2.COLOR_YUV2BGR)
-	print(img)
         cv2.imwrite(name, img)
 
     def liner(self, id_str):
@@ -91,8 +86,9 @@ class Painter:
             [id_str + ".png"], self.root + "linex2/", self.root + _[step])
 
         _ = {'S': True, 'L': False, 'C': True}
+        # 0:small, 1:large, 2:i
         sample = dataset.get_example(0, minimize=_[step], blur=blur, s_size=s_size)
-	id_str = "%d" % sample[2]
+        id_str = "%d" % sample[2]
 
         _ = {'S': 0, 'L': 1, 'C': 0}[step]
         sample_container = np.zeros(

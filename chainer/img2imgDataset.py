@@ -39,22 +39,16 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         return self._paths[i]
 
     def get_example(self, i, minimize=False, blur=0, s_size=128):
-	i = random.randint(0, len(self._testpaths) - 1)
+        i = random.randint(0, len(self._testpaths) - 1)
         path1 = self._testpaths[i]
-	print(path1)
         image1, _ = load_image_pair(path1)
         image1 = cv2.resize(image1, (512, 512), interpolation=cv2.INTER_AREA)
         image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-
-        #print("load:" + path1, os.path.isfile(path1), image1 is None)
         image1 = np.asarray(image1, self._dtype)
-        #print(image1.shape)
-        #print(s_size)
 
         _image1 = image1.copy()
         if minimize:
             if image1.shape[0] < image1.shape[1]:
-                #print("img10<img11")
                 s0 = s_size
                 s1 = int(float(image1.shape[1]) * (float(s_size) / float(image1.shape[0])))
                 s1 = s1 - s1 % 16
@@ -62,13 +56,8 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
                 _s1 = int(float(image1.shape[1]) * ( float(_s0) / float(image1.shape[0])))
                 _s1 = (_s1+8) - (_s1+8) % 16
             else:
-                #print("img10>=img11")
                 s1 = s_size
-                #print("s0::%d,%d,%d" % (image1.shape[0],s_size,image1.shape[1]))
                 s0 = int(float(image1.shape[0]) * (float(s_size) / float(image1.shape[1])))
-                #print("s0=")
-                #print(s0)
-                #print("s0:%d,s1:%d" % (s0,s1))
                 s0 = s0 - s0 % 16
                 _s1 = 4 * s1
                 _s0 = int(float(image1.shape[0]) * ( float(_s1) / float(image1.shape[1])))
@@ -82,7 +71,6 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
             if blur > 0:
                 blured = cv2.blur(_image1, ksize=(blur, blur))
                 image1 = _image1 + blured - 255
-
             image1 = cv2.resize(image1, (s1, s0), interpolation=cv2.INTER_AREA)
 
         # image is grayscale
@@ -98,7 +86,6 @@ class ImageAndRefDataset(chainer.dataset.DatasetMixin):
         return image1.transpose(2, 0, 1), _image1.transpose(2, 0, 1), i
 
 def load_image_pair(image_path):
-    #print("load_image_pair:%s" % image_path)
     input_img = cv2.imread(image_path)
     w = int(input_img.shape[1])
     w2 = int(w/2)
