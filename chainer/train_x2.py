@@ -29,7 +29,7 @@ from img2imgDataset import Image2ImageDatasetX2
 def main():
     parser = argparse.ArgumentParser(
         description='chainer line drawing colorization')
-    parser.add_argument('--batchsize', '-b', type=int, default=2,
+    parser.add_argument('--batchsize', '-b', type=int, default=4,
                         help='Number of images in each mini-batch')
     parser.add_argument('--epoch', '-e', type=int, default=100,
                         help='Number of sweeps over the dataset to train')
@@ -43,7 +43,7 @@ def main():
                         help='Resume the training from snapshot')
     parser.add_argument('--seed', type=int, default=0,
                         help='Random seed')
-    parser.add_argument('--snapshot_interval', type=int, default=10000,
+    parser.add_argument('--snapshot_interval', type=int, default=1000,
                         help='Interval of snapshot')
     parser.add_argument('--display_interval', type=int, default=100,
                         help='Interval of displaying log to console')
