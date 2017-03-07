@@ -102,9 +102,9 @@ def load_image_pair(image_path):
     input_img = cv2.imread(image_path)
     w = int(input_img.shape[1])
     w2 = int(w/2)
-    img_A = input_img[:, 0:w2]
-    img_B = input_img[:, w2:w]
-    return img_A, img_B
+    img_color = input_img[:, 0:w2]
+    img_line = input_img[:, w2:w]
+    return img_line, img_color
 
 class Image2ImageDataset(chainer.dataset.DatasetMixin):
 
