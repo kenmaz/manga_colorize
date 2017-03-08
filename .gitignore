@@ -3,7 +3,15 @@ checkpoint
 datasets
 imgs
 logs*
-python
+python*
 sample*
+test*
 *.tar.gz
 *.pyc
+*.bk
+main/act/*.png
+chainer/*.log
+chainer/result/*
+chainer/result_x2/*
+chainer/images/out/*
+
