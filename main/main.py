@@ -67,10 +67,15 @@ def main(_):
                     checkpoint_dir=args.checkpoint_dir,
                     sample_dir=args.sample_dir)
 
-        if args.phase == 'train':
+        phase = args.phase
+        if phase == 'train':
             model.train(args)
-        else:
+        elif phase == 'test':
             model.test(args)
+        elif phase == 'train_zoom':
+            model.train_zoom(args)
+        else:
+            print("invalid phase :%s" % phase)
 
 if __name__ == '__main__':
     tf.app.run()

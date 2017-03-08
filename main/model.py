@@ -1,13 +1,15 @@
 from __future__ import division
 import os
+import sys
 import time
 from glob import glob
 import tensorflow as tf
 import numpy as np
 from six.moves import xrange
-
+import cv2
 from ops import *
 from utils import *
+import scipy.misc
 
 class pix2pix(object):
     def __init__(self,
@@ -440,3 +442,45 @@ class pix2pix(object):
             )
             save_images(samples, [self.batch_size, 1],
                         './{}/test_{:04d}.png'.format(args.test_dir, idx))
+
+    def train_zoom(self, args):
+        for epoch in xrange(args.epoch):
+            data = glob('./datasets/{}/train/*.jpg'.format(self.dataset_name))
+            batch_idxs = min(len(data), args.train_size) // self.batch_size
+
+            for idx in xrange(0, batch_idxs):
+                batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
+                batch = [load_data(batch_file, self.load_size, self.image_size) for batch_file in batch_files]
+                if (self.is_grayscale):
+                    batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
+                else:
+                    batch_images = np.array(batch).astype(np.float32)
+                real_color = batch_images[:, :, :, :self.input_c_dim]
+                real_mono = batch_images[:, :, :, self.input_c_dim:self.input_c_dim + self.output_c_dim]
+
+                min_color = scipy.misc.imresize(real_color[0], (120,80))
+                scipy.misc.imsave('a.png', min_color)
+                min_color_zoom = scipy.misc.imresize(min_color, (240,160))
+                print(min_color_zoom.shape)
+                scipy.misc.imsave('d.png', min_color_zoom)
+                big_mono = scipy.misc.imresize(real_mono[0], (240,160))
+                big_mono = self.rgb2gray(big_mono)
+                print(big_mono.shape)
+
+                mixed = min_color_zoom[:, :, np.newaxis]
+                mixed = np.insert(mixed, 1, min_color_zoom[:,:,0])
+                mixed = np.insert(mixed, 2, min_color_zoom[:,:,1])
+                mixed = np.insert(mixed, 3, min_color_zoom[:,:,2])
+                print(mixed)
+
+                fake_big_color = scipy.misc.imresize(real_color[0], (240,160))
+                scipy.misc.imsave('b.png', fake_big_color)
+
+                scipy.misc.imsave('c.png', big_mono)
+
+
+                sys.exit()
+
+    def rgb2gray(self, rgb):
+        return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
