@@ -24,20 +24,20 @@ def load_data(image_path, load_size, fine_size, flip=True, is_test=False):
     img_A = img_A/127.5 - 1.
     img_B = img_B/127.5 - 1.
 
-    #print(img_A.shape)
-    #print(img_B.shape)
-    img_AB = np.concatenate((img_A, img_B), axis=2)
-    # img_AB shape: (fine_size, fine_size, input_c_dim + output_c_dim)
-    return img_AB
+    return img_A, img_B
 
 def load_image(image_path):
-    input_img = imread(image_path)
-    w = int(input_img.shape[1])
+    img = imread(image_path)
+    w = int(img.shape[1])
     w2 = int(w/2)
-    img_A = input_img[:, 0:w2]
-    img_B = input_img[:, w2:w]
+    img_color = img[:, 0:w2]
 
-    return img_A, img_B
+    img = imread(image_path, is_grayscale=True)
+    w = int(img.shape[1])
+    w2 = int(w/2)
+    img_grayscale = img[:, w2:w]
+
+    return img_color, img_grayscale
 
 def preprocess_A_and_B(img_A, img_B, load_size, fine_size, flip=True, is_test=False):
     if is_test:

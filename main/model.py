@@ -451,32 +451,37 @@ class pix2pix(object):
             for idx in xrange(0, batch_idxs):
                 batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
                 batch = [load_data(batch_file, self.load_size, self.image_size) for batch_file in batch_files]
-                if (self.is_grayscale):
-                    batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
-                else:
-                    batch_images = np.array(batch).astype(np.float32)
-                real_color = batch_images[:, :, :, :self.input_c_dim]
-                real_mono = batch_images[:, :, :, self.input_c_dim:self.input_c_dim + self.output_c_dim]
+                real_color = np.array([batch[0][0]]).astype(np.float32)
+                real_mono =  np.array([batch[0][1]]).astype(np.float32)
+                print(real_color.shape)
+                print(real_mono.shape)
 
-                min_color = scipy.misc.imresize(real_color[0], (120,80))
-                scipy.misc.imsave('a.png', min_color)
-                min_color_zoom = scipy.misc.imresize(min_color, (240,160))
-                print(min_color_zoom.shape)
-                scipy.misc.imsave('d.png', min_color_zoom)
-                big_mono = scipy.misc.imresize(real_mono[0], (240,160))
-                big_mono = self.rgb2gray(big_mono)
+                size_min = (3,2)
+                size_big = (6,4)
+                min_color = scipy.misc.imresize(real_color[0], size_min)
+                scipy.misc.imsave('img_min_c.png', min_color)
+                min_color_zoom = scipy.misc.imresize(min_color, size_big)
+                scipy.misc.imsave('img_min_c_zoom.png', min_color_zoom)
+                big_mono = scipy.misc.imresize(real_mono[0], size_big)
+
+                mixed = min_color_zoom
+                print(mixed.shape)
+                print(mixed)
                 print(big_mono.shape)
-
-                mixed = min_color_zoom[:, :, np.newaxis]
-                mixed = np.insert(mixed, 1, min_color_zoom[:,:,0])
-                mixed = np.insert(mixed, 2, min_color_zoom[:,:,1])
-                mixed = np.insert(mixed, 3, min_color_zoom[:,:,2])
+                print(big_mono)
+                mixed = np.insert(mixed, 3, big_mono, axis=2)
+                print(mixed.shape)
                 print(mixed)
 
-                fake_big_color = scipy.misc.imresize(real_color[0], (240,160))
-                scipy.misc.imsave('b.png', fake_big_color)
+                #mixed = mixed[:, :, np.newaxis]
+                #mixed = np.insert(mixed, 1, min_color_zoom[:,:,0])
+                #mixed = np.insert(mixed, 2, min_color_zoom[:,:,1])
+                #mixed = np.insert(mixed, 3, min_color_zoom[:,:,2])
 
-                scipy.misc.imsave('c.png', big_mono)
+                fake_big_color = scipy.misc.imresize(real_color[0], size_big)
+                scipy.misc.imsave('img_big_c_real.png', fake_big_color)
+
+                scipy.misc.imsave('img_big_m_real.png', big_mono)
 
 
                 sys.exit()
