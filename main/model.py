@@ -230,10 +230,14 @@ class pix2pix(object):
                 color_imgs = np.array(color_imgs)
 
                 # Update G network
-                _, summary_str = self.sess.run([g_optim, self.g_sum], feed_dict={ self.real_A: mono_imgs, self.real_B: color_imgs })
+                _, summary_str, out_images = self.sess.run([g_optim, self.g_sum, self.d8], feed_dict={ self.real_A: mono_imgs, self.real_B: color_imgs })
                 self.writer.add_summary(summary_str, counter)
 
                 errG = self.g_loss.eval({ self.real_A: mono_imgs, self.real_B: color_imgs })
+
+                if np.mod(counter, 10) == 0:
+                    result_img = scipy.misc.imresize(out_images[0], self.image_size)
+                    scipy.misc.imsave("out_%d.jpg" % counter, result_img)
 
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, g_loss: %.8f" \
