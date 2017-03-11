@@ -48,6 +48,9 @@ class pix2pix(object):
         self.d_bn1 = batch_norm(name='d_bn1')
         self.d_bn2 = batch_norm(name='d_bn2')
         self.d_bn3 = batch_norm(name='d_bn3')
+        self.d_bn4 = batch_norm(name='d_bn4')
+        self.d_bn5 = batch_norm(name='d_bn5')
+        self.d_bn6 = batch_norm(name='d_bn6')
 
         self.g_bn_e2 = batch_norm(name='g_bn_e2')
         self.g_bn_e3 = batch_norm(name='g_bn_e3')
@@ -70,27 +73,71 @@ class pix2pix(object):
         self.build_model()
 
     def build_model(self):
+        # 3ch image (real-color)
         self.real_B = tf.placeholder(tf.float32,
                                     [self.batch_size, self.image_size[0], self.image_size[1],self.output_c_dim],
                                     name='real_B')
 
+        # 4ch image (zoom-color + mono-line)
         self.real_A = tf.placeholder(tf.float32,
                                      [self.batch_size, self.image_size[0], self.image_size[1], self.input_c_dim],
                                      name='real_A')
 
         self.fake_B = self.generator(self.real_A)
 
-        self.real_AB = tf.concat(3, [self.real_A, self.real_B])
-        self.fake_AB = tf.concat(3, [self.real_A, self.fake_B])
+        self.D, self.D_logits = self.discriminator(self.real_B, reuse=False)
+        self.D_, self.D_logits_ = self.discriminator(self.fake_B, reuse=True)
 
+        self.d_sum = tf.summary.histogram("d", self.D)
+        self.d__sum = tf.summary.histogram("d_", self.D_)
         self.fake_B_sum = tf.summary.image("fake_B", self.fake_B)
 
-        self.g_loss = tf.reduce_mean(self.L1_lambda * tf.reduce_mean(tf.abs(self.real_B - self.fake_B)))
+        self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
+        self.d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.zeros_like(self.D_)))
+        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_))) \
+                + self.L1_lambda * tf.reduce_mean(tf.abs(self.real_B - self.fake_B))
+
+        self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
+        self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
+        self.d_loss = self.d_loss_real + self.d_loss_fake
+
         self.g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
+        self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
 
         t_vars = tf.trainable_variables()
+        self.d_vars = [var for var in t_vars if 'd_' in var.name]
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
+
         self.saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
+
+    def discriminator(self, image, y=None, reuse=False):
+        print("dis image:%s" % image.get_shape)
+        # image (:, 1200, 800, 3)
+
+        if reuse:
+            tf.get_variable_scope().reuse_variables()
+        else:
+            assert tf.get_variable_scope().reuse == False
+
+        h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+        # image (:, 600, 400, 64)
+        h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
+        # image (:, 300, 200, 128)
+        h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
+        # image (:, 150, 100, 256)
+        h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
+        # image (:, 75, 50, 512)
+        h4 = lrelu(self.d_bn4(conv2d(h3, self.df_dim*16, name='d_h4_conv')))
+        # image (:, 38, 25, 1024)
+        h5 = lrelu(self.d_bn5(conv2d(h4, self.df_dim*32, name='d_h5_conv')))
+        # image (:, 19, 13, 2048)
+        h6 = lrelu(self.d_bn6(conv2d(h5, self.df_dim*64, d_h=1, d_w=1, name='d_h6_conv')))
+        h7 = linear(tf.reshape(h6, [self.batch_size, -1]), 1, 'd_h7_lin')
+
+        for h in [h0,h1,h2,h3,h4,h5,h6,h7]:
+            print("h:%s" % h)
+
+        return tf.nn.sigmoid(h7), h7
 
     def generator(self, image, y=None):
         #[1200, 800]
@@ -190,16 +237,19 @@ class pix2pix(object):
             return False
 
     def train_zoom(self, args):
-        adam = tf.train.AdamOptimizer(args.lr, beta1=args.beta1)
-        g_optim = adam.minimize(self.g_loss, var_list=self.g_vars)
 
+        d_optim = tf.train.AdamOptimizer(args.lr, beta1=args.beta1) \
+                          .minimize(self.d_loss, var_list=self.d_vars)
+        g_optim = tf.train.AdamOptimizer(args.lr, beta1=args.beta1) \
+                          .minimize(self.g_loss, var_list=self.g_vars)
         self.sess.run(tf.global_variables_initializer())
 
-        self.g_sum = tf.summary.merge([self.fake_B_sum, self.g_loss_sum])
+        self.g_sum = tf.summary.merge([self.d__sum, self.fake_B_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        self.d_sum = tf.summary.merge([self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
-
         counter = 1
         start_time = time.time()
+
         if self.load(self.checkpoint_dir):
             print(" [*] Load SUCCESS")
         else:
@@ -229,10 +279,16 @@ class pix2pix(object):
                 mono_imgs = np.array(mono_imgs)
                 color_imgs = np.array(color_imgs)
 
+                # Update D network
+                _, summary_str = self.sess.run([d_optim, self.d_sum], feed_dict={ self.real_A: mono_imgs, self.real_B: color_imgs })
+                self.writer.add_summary(summary_str, counter)
+
                 # Update G network
                 _, summary_str, out_images = self.sess.run([g_optim, self.g_sum, self.d8], feed_dict={ self.real_A: mono_imgs, self.real_B: color_imgs })
                 self.writer.add_summary(summary_str, counter)
 
+                errD_fake = self.d_loss_fake.eval({ self.real_A: mono_imgs, self.real_B: color_imgs })
+                errD_real = self.d_loss_real.eval({ self.real_A: mono_imgs, self.real_B: color_imgs })
                 errG = self.g_loss.eval({ self.real_A: mono_imgs, self.real_B: color_imgs })
 
                 if np.mod(counter, 10) == 0:
@@ -240,9 +296,9 @@ class pix2pix(object):
                     scipy.misc.imsave("train/out_%d.jpg" % counter, result_img)
 
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, g_loss: %.8f" \
-                    % (epoch, idx, batch_idxs,
-                        time.time() - start_time, errG))
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                            % (epoch, idx, batch_idxs,
+                                time.time() - start_time, errD_fake+errD_real, errG))
 
                 if np.mod(counter, 500) == 2:
                     self.save(args.checkpoint_dir, counter)
