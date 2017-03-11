@@ -10,6 +10,8 @@ test*
 *.pyc
 *.bk
 main/act/*.png
+main/train/*
+main/log.txt
 chainer/*.log
 chainer/result/*
 chainer/result_x2/*

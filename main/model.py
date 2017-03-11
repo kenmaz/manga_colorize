@@ -237,7 +237,7 @@ class pix2pix(object):
 
                 if np.mod(counter, 10) == 0:
                     result_img = scipy.misc.imresize(out_images[0], self.image_size)
-                    scipy.misc.imsave("out_%d.jpg" % counter, result_img)
+                    scipy.misc.imsave("train/out_%d.jpg" % counter, result_img)
 
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, g_loss: %.8f" \
