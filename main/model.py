@@ -110,33 +110,28 @@ class pix2pix(object):
         self.saver = tf.train.Saver(keep_checkpoint_every_n_hours = 1)
 
     def discriminator(self, image, y=None, reuse=False):
-        print("dis image:%s" % image.get_shape)
-        # image (:, 1200, 800, 3)
+        with tf.variable_scope(tf.get_variable_scope(), reuse=reuse):
+            print("dis image:%s" % image.get_shape)
+            # image (:, 1200, 800, 3)
+            h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+            # image (:, 600, 400, 64)
+            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
+            # image (:, 300, 200, 128)
+            h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
+            # image (:, 150, 100, 256)
+            h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
+            # image (:, 75, 50, 512)
+            h4 = lrelu(self.d_bn4(conv2d(h3, self.df_dim*16, name='d_h4_conv')))
+            # image (:, 38, 25, 1024)
+            h5 = lrelu(self.d_bn5(conv2d(h4, self.df_dim*32, name='d_h5_conv')))
+            # image (:, 19, 13, 2048)
+            h6 = lrelu(self.d_bn6(conv2d(h5, self.df_dim*64, d_h=1, d_w=1, name='d_h6_conv')))
+            h7 = linear(tf.reshape(h6, [self.batch_size, -1]), 1, 'd_h7_lin')
 
-        if reuse:
-            tf.get_variable_scope().reuse_variables()
-        else:
-            assert tf.get_variable_scope().reuse == False
+            for h in [h0,h1,h2,h3,h4,h5,h6,h7]:
+                print("h:%s" % h)
 
-        h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
-        # image (:, 600, 400, 64)
-        h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
-        # image (:, 300, 200, 128)
-        h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
-        # image (:, 150, 100, 256)
-        h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, name='d_h3_conv')))
-        # image (:, 75, 50, 512)
-        h4 = lrelu(self.d_bn4(conv2d(h3, self.df_dim*16, name='d_h4_conv')))
-        # image (:, 38, 25, 1024)
-        h5 = lrelu(self.d_bn5(conv2d(h4, self.df_dim*32, name='d_h5_conv')))
-        # image (:, 19, 13, 2048)
-        h6 = lrelu(self.d_bn6(conv2d(h5, self.df_dim*64, d_h=1, d_w=1, name='d_h6_conv')))
-        h7 = linear(tf.reshape(h6, [self.batch_size, -1]), 1, 'd_h7_lin')
-
-        for h in [h0,h1,h2,h3,h4,h5,h6,h7]:
-            print("h:%s" % h)
-
-        return tf.nn.sigmoid(h7), h7
+            return tf.nn.sigmoid(h7), h7
 
     def generator(self, image, y=None):
         #[1200, 800]
