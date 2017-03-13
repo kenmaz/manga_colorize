@@ -223,17 +223,16 @@ class pix2pix(object):
                         global_step=step)
 
     def load(self, checkpoint_dir):
-        print(" [*] Reading checkpoint...")
-
-        model_dir = "%s_%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size[0], self.output_size[1])
-        checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
+        print(" [*] Reading checkpoint...", checkpoint_dir)
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         if ckpt and ckpt.model_checkpoint_path:
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
             self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
+            print(" [*] Load SUCCESS")
             return True
         else:
+            print(" [!] Load failed...")
             return False
 
     def train_zoom(self, args):
@@ -249,11 +248,7 @@ class pix2pix(object):
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
         counter = 1
         start_time = time.time()
-
-        if self.load(self.checkpoint_dir):
-            print(" [*] Load SUCCESS")
-        else:
-            print(" [!] Load failed...")
+        self.load(self.checkpoint_dir)
 
         for epoch in xrange(args.epoch):
             data = glob('./datasets/{}/train/*.jpg'.format(self.dataset_name))
@@ -262,22 +257,7 @@ class pix2pix(object):
             for idx in xrange(0, batch_idxs):
                 batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
                 batch_images = [load_data(batch_file, self.load_size, self.image_size) for batch_file in batch_files]
-
-                color_imgs = []
-                mono_imgs = []
-                for i in xrange(self.batch_size):
-                    img_color = np.array(batch_images[i][0]).astype(np.float32)
-                    img_mono =  np.array(batch_images[i][1]).astype(np.float32)
-                    min_color = scipy.misc.imresize(img_color, self.load_size)
-                    min_color_zoom = scipy.misc.imresize(min_color, self.image_size)
-                    big_mono = scipy.misc.imresize(img_mono, self.image_size)
-                    src_imgs = np.insert(min_color_zoom, 3, big_mono, axis=2)
-                    dst_imgs = scipy.misc.imresize(img_color, self.image_size)
-                    mono_imgs.append(src_imgs/127.5 - 1.)
-                    color_imgs.append(dst_imgs/127.5 - 1.)
-
-                mono_imgs = np.array(mono_imgs)
-                color_imgs = np.array(color_imgs)
+                mono_imgs, color_imgs = self.resize_for_zoom(batch_images)
 
                 # Update D network
                 _, summary_str = self.sess.run([d_optim, self.d_sum], feed_dict={ self.real_A: mono_imgs, self.real_B: color_imgs })
@@ -303,6 +283,44 @@ class pix2pix(object):
                 if np.mod(counter, 500) == 2:
                     self.save(args.checkpoint_dir, counter)
 
+    def resize_for_zoom(self, batch_images):
+        color_imgs = []
+        mono_imgs = []
+        for i in xrange(self.batch_size):
+            img_color = np.array(batch_images[i][0]).astype(np.float32)
+            img_mono =  np.array(batch_images[i][1]).astype(np.float32)
+            min_color = scipy.misc.imresize(img_color, self.load_size)
+            min_color_zoom = scipy.misc.imresize(min_color, self.image_size)
+            big_mono = scipy.misc.imresize(img_mono, self.image_size)
+            src_imgs = np.insert(min_color_zoom, 3, big_mono, axis=2)
+            dst_imgs = scipy.misc.imresize(img_color, self.image_size)
+            mono_imgs.append(src_imgs/127.5 - 1.)
+            color_imgs.append(dst_imgs/127.5 - 1.)
+        return np.array(mono_imgs), np.array(color_imgs)
+
     def rgb2gray(self, rgb):
         return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
 
+    def test(self, args):
+        self.sess.run(tf.global_variables_initializer())
+        self.load(self.checkpoint_dir)
+
+        data = glob('./datasets/manga/val/*.jpg')
+        batch_idxs = min(len(data), args.train_size) // self.batch_size
+
+        for idx in xrange(0, batch_idxs):
+            batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
+            print("sampling image ", idx, batch_files)
+
+            batch_images = [load_data(batch_file, self.load_size, self.image_size) for batch_file in batch_files]
+            mono_imgs, color_imgs = self.resize_for_zoom(batch_images)
+
+            samples = self.sess.run(
+                self.fake_B,
+                feed_dict={self.real_A: mono_imgs}
+            )
+
+            fake_img = scipy.misc.imresize(samples[0], self.image_size)
+            real_img = scipy.misc.imresize(color_imgs[0], self.image_size)
+            scipy.misc.imsave("test/%d_fake.jpg" % idx, fake_img)
+            scipy.misc.imsave("test/%d_real.jpg" % idx, real_img)
