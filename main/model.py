@@ -82,10 +82,13 @@ class pix2pix(object):
                                      [self.batch_size, self.image_size[0], self.image_size[1], self.input_c_dim],
                                      name='real_A')
 
-        self.fake_B = self.generator(self.real_A)
+        with tf.name_scope('G'):
+            self.fake_B = self.generator(self.real_A)
 
-        self.D, self.D_logits = self.discriminator(self.real_B, reuse=False)
-        self.D_, self.D_logits_ = self.discriminator(self.fake_B, reuse=True)
+        with tf.name_scope('D1'):
+            self.D, self.D_logits = self.discriminator(self.real_B, reuse=False)
+        with tf.name_scope('D2'):
+            self.D_, self.D_logits_ = self.discriminator(self.fake_B, reuse=True)
 
         self.d_sum = tf.summary.histogram("d", self.D)
         self.d__sum = tf.summary.histogram("d_", self.D_)
